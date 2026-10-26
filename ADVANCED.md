@@ -90,6 +90,14 @@ nrf_cloud_onboard --api-key $API_KEY --csv onboard.csv
 
 If the `--res` parameter is used, the onboarding result information will be saved to the specified file instead of printed to the output.
 
+The CSV file has one row per device, in the following format:
+```
+<device_id>,<subtype>,<tags>,<fw_types>,"<device_cert_pem>"
+```
+Only the device ID and the device certificate are required, for example `my-device-id,,,,"-----BEGIN CERTIFICATE-----..."`.
+To onboard many devices at once, use a CSV file with multiple rows, for example one created using the `--append` option of `device_credentials_installer`.
+You can also upload the same CSV file in the nRF Cloud portal, from **Devices** > **Add devices**.
+
 ## nRF93M1 Device Onboarding
 
 The `nrf93_onboard` script onboards an nRF93M1 device to nRF Cloud using a registration token JWT generated directly on the device. It connects over serial, retrieves the device UUID and identity key via AT commands, fetches the tenant ID from the nRF Cloud account, and then calls `AT%REGJWT` on the device to produce the JWT used as the onboarding token.
