@@ -44,6 +44,7 @@ File created: /some/path/my_ca/0x48a2b0c9862ffe08d709864f576caa0a9ff9bfbf_pub.pe
 ## Device Credentials Installer
 
 This script automates the process of generating and programming device credentials to a device such as the nRF9160-DK, Thingy:91X or nRF9151-DK running an nRF Connect SDK application containing the [AT Host library](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/libraries/modem/at_host.html) or [AT Shell](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/libraries/modem/at_shell.html).
+It also supports devices without a modem, such as nRF71 Series and nRF70 Series Wi-Fi devices. See [Devices without a modem](#devices-without-a-modem).
 
 Use the `create_ca_cert` script to generate the required CA certificate and CA key before running this script.
 
@@ -76,6 +77,33 @@ device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify
 ```
 device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --id-imei --id-str nrf-
 ```
+
+### Devices without a modem
+
+Devices without a Nordic cellular modem have no AT interface, so use the `--cmd-type` option to select the shell that the device firmware provides:
+
+* `nrf_cloud_cred_shell` (recommended): The device generates its private key and CSR itself, and the script installs the signed device certificate. The private key never leaves the device.
+  The firmware must include the [nRF Cloud credentials keygen library](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/libraries/networking/nrf_cloud_credentials_keygen.html) with its shell enabled (nRF Connect SDK v3.5.0 or later).
+  To use `--verify`, the firmware must also enable `CONFIG_NRF_CLOUD_CREDENTIALS_KEYGEN_VERIFY`.
+  Do not use `--local-cert` or `--local-cert-file` with this command type.
+* `tls_cred_shell`: The script generates the private key and device certificate on the host and installs them through the Zephyr [TLS Credentials Shell](https://docs.zephyrproject.org/latest/services/connectivity/networking/api/tls_credentials_shell.html).
+  This command type requires `--local-cert` or `--local-cert-file`, as the TLS Credentials Shell cannot generate a CSR.
+  Because the private key exists on the host, this is less secure. Delete it from the host after installation.
+
+These devices have no modem UUID or IMEI to read the device ID from, so pass the device ID that the firmware uses with `--id-str` (see the note above).
+If you omit it, the script generates a random UUID, which the firmware does not know about.
+
+#### On-device key generation
+```
+device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --coap --cmd-type nrf_cloud_cred_shell --id-str <device_id>
+```
+
+#### Host-generated key
+```
+device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --coap --cmd-type tls_cred_shell --local-cert --id-str <device_id>
+```
+
+Omit `--coap` if the device connects to nRF Cloud using MQTT only.
 
 ## nRF Cloud Device Onboarding
 
@@ -296,6 +324,13 @@ if no CSR provided:
 `<your_prefix><CN>_prv.pem`
 If no CN (common name) is provided/available, the serial number hex value will be used.
 
+The script also writes an onboarding CSV file (`onboard.csv` by default, set with `--csv`) for use with `nrf_cloud_onboard`.
+
+With the `--embed-save` option, the script instead writes `client-cert.pem`, `private-key.pem`, and `ca-cert.pem`, formatted for building into firmware with the nRF Connect SDK `CONFIG_NRF_CLOUD_PROVISION_CERTIFICATES` Kconfig option. See [Hard-coded credentials](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/libraries/networking/nrf_cloud_preconnect_provisioning.html#hard-coded-credentials).
+`ca-cert.pem` holds the nRF Cloud root CA certificate(s), not your own CA. Add `--coap` to include the nRF Cloud CoAP root CA certificate.
+
+:warning:**This stores the device private key in unprotected memory on the device. Use it for testing only.**
+
 ### Examples
 
 #### No CSR provided
@@ -313,6 +348,11 @@ create_device_credentials --ca /my_ca/my_company-0x3bc7f3b014a8ad492999c594f08bb
 Creating device credentials...
 File created: /dev_credentials/hw_rev2-50363154-3931-44f0-8022-121b6401627d_crt.pem
 File created: /dev_credentials/hw_rev2-50363154-3931-44f0-8022-121b6401627d_pub.pem
+```
+
+#### Credentials to build into firmware
+```
+create_device_credentials --ca *_ca.pem --ca-key *_prv.pem -c NO --cn my-unique-device-id -p dev_credentials --embed-save --coap
 ```
 
 ## Claim and Provision Device

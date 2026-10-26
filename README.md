@@ -40,7 +40,7 @@ Run the following command to use this package as a dependency:
 
 * **For using the Provisioning Service:** Enable the [Provisioning Service library](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/libraries/networking/nrf_provisioning.html). You can find more documentation about the [Provisioning Service here](https://docs.nordicsemi.com/bundle/nrf-cloud/page/SecurityServices/ProvisioningService/ProvisioningOverview.html). The nRF Connect SDK provides a [sample](https://github.com/nrfconnect/sdk-nrf/tree/main/samples/cellular/nrf_device_provisioning) with a focused look at provisioning steps on cellular devices.
 
-4. When compiling with the nRF Cloud Libraries, make sure your project has the next Kconfig options:
+4. For nRF91 Series devices, when compiling with the nRF Cloud Libraries, make sure your project has the next Kconfig options:
 
     ```Kconfig
     # Enable modem-based JSON Web Token (JWT) generation required for nRF Cloud authentication
@@ -50,6 +50,8 @@ Run the following command to use this package as a dependency:
     CONFIG_NRF_CLOUD_CLIENT_ID_SRC_INTERNAL_UUID=y
     ```
 :warning:**Failure to include these settings will prevent the device from connecting to nRF Cloud.**
+
+For devices without a modem, such as nRF71 Series and nRF70 Series Wi-Fi devices, see [Devices without a modem](https://github.com/nRFCloud/utils/blob/main/ADVANCED.md#devices-without-a-modem) instead.
 
 ## How-To: Registering devices quickly
 
@@ -70,6 +72,12 @@ device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --coap
 ```
 device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --id-imei --id-str nrf- --coap
 ```
+#### Device without a modem, key generated on the device (for example, nRF71 Series or nRF70 Series with Wi-Fi)
+```
+device_credentials_installer -d --ca *_ca.pem --ca-key *_prv.pem --verify --coap --cmd-type nrf_cloud_cred_shell --id-str <device_id>
+```
+See [Devices without a modem](https://github.com/nRFCloud/utils/blob/main/ADVANCED.md#devices-without-a-modem) for the firmware requirements.
+
 :warning:**Failure to select the correct device ID will result in a connection refused from nRF Cloud.**
 
 Upon success, you can find an `onboard.csv` file with information about your device. This file is needed to register the certificate with your account.
